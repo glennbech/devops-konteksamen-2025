@@ -102,3 +102,54 @@ Test 3: Sikring av API-nøkler
 
 Testene bekreftet at workflowen fungerer som spesifisert i oppgaven.
 
+Oppgave 2: Forbedring og utvidelse av Terraform-koden
+Under utviklingen av oppgave 2 oppstod det problemer med branches og .gitignore filen. Derfor måtte jeg slette progresjonen min og resette oppgaven.
+
+
+Endringer i Terraform-konfigurasjonen
+I denne oppgaven har jeg forbedret og utvidet Terraform-koden ved å:
+1. Erstatte hardkodede verdier med variabler** for mer fleksibilitet.  
+2. Legge til en `contact_group`-ressurs** for StatusCake med støtte for e-postvarsler.  
+2. Oppdatere CI/CD-pipelinen** til å bruke de nye variablene.
+
+Endringer i `main.tf`
+1. `uptime_check`-ressursen bruker nå variabler i stedet for hardkodede verdier.
+2.  Ny ressurs: `statuscake_contact_group` som støtter email addresse:
+
+    resource "statuscake_contact_group" "default" {
+      name            = var.contact_group_name
+      email_addresses = var.contact_group_emails
+    }
+
+For å gjøre konfigurasjonen mer fleksibel, har jeg opprettet `variables.tf`:
+
+    variable "contact_group_emails" {
+      description = "Liste over e-postadresser i kontaktgruppen"
+      type        = list(string)
+      default     = ["din.email@example.com"]
+    }
+
+Endringer i `hellow_world.yml`:
+1. Pipeline tar nå hensyn til de nye variablene.
+2. Terraform plan og apply kjører som før, men med oppdaterte parametere.
+
+Test av løsningen:
+FFor å sikre at alt fungerer som forventet, har jeg kjørt flere tester:
+
+Test 1: Terraform Plan
+Gjorde en liten oppdatering i main.tf og pushet til en feature branch.
+- Terraform Plan kjørte vellykket, og viste at en ny contact_group skulle opprettes.
+
+Test 2: Terraform Apply på main
+Merget feature branch til main.
+-Terraform Apply opprettet både contact_group og uptime_check.
+-Bekreftet i StatusCake at kontaktgruppen og overvåkningen er aktiv.
+
+Test 3: E-postvarsling
+E-postadressen ble registrert i StatusCake.
+-Bekreftet at Terraform output viste riktig ID for contact_group.
+
+Konklusjon
+Terraform-konfigurasjonen er nå mer fleksibel og inkluderer en `contact_group` med varsling. CI/CD fungerer som forventet, og StatusCake-miljøet er riktig konfigurert.
+
+
