@@ -1,0 +1,41 @@
+name: Terraform Pipeline
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  TF_STATE_FILE: "terraform.tfstate"
+  TF_DIR: "infrastructure"
+  STATUSCAKE_API_TOKEN: OYBBaMXr0FkJb8eaM3iO
+
+jobs:
+  terraform:
+    name: Terraform Workflow
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v1
+
+      - name: Initialize Terraform
+        run: terraform init
+        working-directory: ${{ env.TF_DIR }}
+
+      - name: Apply Terraform s
+        run: terraform apply -auto-approve
+        working-directory: ${{ env.TF_DIR }}
+
+      - name: Commit and Push Terraform State
+        run: |
+          git config --global user.email "github-actions@github.com"
+          git config --global user.name "GitHub Actions"
+          git pull
+          git add $TF_DIR/$TF_STATE_FILE
+          git commit -m "Update Terraform state [skip ci]" || echo "No changes to commit"
+          git push
