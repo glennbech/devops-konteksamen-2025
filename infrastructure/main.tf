@@ -12,9 +12,10 @@ provider "statuscake" {
 }
 
 resource "statuscake_contact_group" "default" {
-  name  = var.contact_group_name
-  email = var.contact_group_emails
+  name            = var.contact_group_name
+  email_addresses = var.contact_group_emails
 }
+
 
 resource "statuscake_uptime_check" "example" {
   check_interval = var.check_interval

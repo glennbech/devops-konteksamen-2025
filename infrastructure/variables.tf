@@ -12,8 +12,9 @@ variable "contact_group_name" {
 variable "contact_group_emails" {
   description = "E-postadresser for kontaktgruppen"
   type        = list(string)
-  default     = ["devops@example.com"]
+  default     = ["mumi002@student.krstiania.no"]
 }
+
 
 variable "uptime_check_name" {
   description = "Navn på uptime-sjekken"
