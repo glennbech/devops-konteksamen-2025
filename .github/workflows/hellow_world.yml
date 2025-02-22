@@ -1,7 +1,13 @@
 name: Terraform Pipeline
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - 'feature/**'
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: write
@@ -9,7 +15,7 @@ permissions:
 env:
   TF_STATE_FILE: "terraform.tfstate"
   TF_DIR: "infrastructure"
-  STATUSCAKE_API_TOKEN: OYBBaMXr0FkJb8eaM3iO
+  STATUSCAKE_API_TOKEN: ${{ secrets.STATUSCAKE_API_TOKEN }}
 
 jobs:
   terraform:
@@ -27,15 +33,11 @@ jobs:
         run: terraform init
         working-directory: ${{ env.TF_DIR }}
 
-      - name: Apply Terraform s
-        run: terraform apply -auto-approve
+      - name: Terraform Plan
+        run: terraform plan -out=tfplan
         working-directory: ${{ env.TF_DIR }}
 
-      - name: Commit and Push Terraform State
-        run: |
-          git config --global user.email "github-actions@github.com"
-          git config --global user.name "GitHub Actions"
-          git pull
-          git add $TF_DIR/$TF_STATE_FILE
-          git commit -m "Update Terraform state [skip ci]" || echo "No changes to commit"
-          git push
+      - name: Apply Terraform (only on main)
+        if: github.ref == 'refs/heads/main'
+        run: terraform apply -auto-approve tfplan
+        working-directory: ${{ env.TF_DIR }}
