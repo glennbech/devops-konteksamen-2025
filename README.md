@@ -1,4 +1,5 @@
-Oppgave 1: Sikkerhet og forbedring av CI/CD-pipelinen
+Oppgave 1: 
+Sikkerhet og forbedring av CI/CD-pipelinen
 
 Endringer i CI/CD-pipelinen:
 I denne oppgaven har jeg forbedret GitHub Actions workflowen for Terraform for å implementere en automatisert og sikker CI/CD-pipeline.
@@ -102,7 +103,9 @@ Test 3: Sikring av API-nøkler
 
 Testene bekreftet at workflowen fungerer som spesifisert i oppgaven.
 
-Oppgave 2: Forbedring og utvidelse av Terraform-koden
+Oppgave 2: 
+Forbedring og utvidelse av Terraform-koden
+
 Under utviklingen av oppgave 2 oppstod det problemer med branches og .gitignore filen. Derfor måtte jeg slette progresjonen min og resette oppgaven.
 
 
@@ -152,4 +155,148 @@ E-postadressen ble registrert i StatusCake.
 Konklusjon
 Terraform-konfigurasjonen er nå mer fleksibel og inkluderer en `contact_group` med varsling. CI/CD fungerer som forventet, og StatusCake-miljøet er riktig konfigurert.
 
+Oppgave 3: 
+Terraform-moduler
 
+Beskrivelse
+I denne oppgaven ble Terraform-koden utvidet for å overvåke flere nettsider med StatusCake. For å unngå repetisjon av kode ble det opprettet en Terraform-modul (`modules/statuscake_uptime`) som brukes for å definere og gjenbruke oppsettet for oppetidssjekker.
+
+Modulen ble brukt til å opprette to separate overvåkninger:
+1. VG.no - `VG Uptime Check`
+2. XKCD.com - `XKCD Uptime Check`
+
+Endringer og Implementasjon
+- Opprettet en mappe `modules/statuscake_uptime` som inneholder:
+  - `main.tf` (definerer ressursene)
+  - `variables.tf` (definerer variablene for modulen)
+  - `outputs.tf` (definerer hvilke verdier modulen eksponerer)
+- Brukt modulen to ganger i `infrastructure/main.tf` for å overvåke VG og XKCD.
+- Definerte variabler for oppetidsjekker, inkludert `timeout`, `validate_ssl`, `status_codes`, og `follow_redirects`.
+
+Eksempel på hvordan modulen brukes:
+module "uptime_check_vg" {
+  source          = "../modules/statuscake_uptime"
+  name            = "VG Uptime Check"
+  address         = "https://www.vg.no"
+  check_interval  = 300
+  confirmation    = 3
+  trigger_rate    = 10
+  timeout         = 50
+  validate_ssl    = true
+  follow_redirects = true
+  status_codes    = ["200", "301", "302"]
+  tags            = ["news", "monitoring"]
+}
+
+Problemer og Feilsøking
+Til tross for at Terraform-konfigurasjonen er riktig, viser StatusCake fortsatt at begge nettsidene er "down". Dette kan skyldes flere faktorer:
+1. StatusCake blokkeres eller møter redirect-problemer
+   - Løsning: Aktivere `follow_redirects = true` i modulen.
+2. Nettsidene returnerer uventede statuskoder
+   - Løsning: Endre `status_codes = ["200", "301", "302"]` for å tillate redirects.
+3. Timeout kan være for lav eller for høy
+   - Løsning: Justere `timeout` for å se om forespørselen må vente lengre.
+4. StatusCake-loggene må sjekkes for detaljerte feilmeldinger
+   - Løsning: Gå til StatusCake dashboard og se feilmeldingene for hver sjekk.
+
+Eksempel på en mulig feilsøkingstilnærming i `main.tf`:
+module "uptime_check_xkcd" {
+  source          = "../modules/statuscake_uptime"
+  name            = "XKCD Uptime Check"
+  address         = "https://xkcd.com"
+  check_interval  = 300
+  confirmation    = 3
+  trigger_rate    = 5
+  timeout         = 50
+  validate_ssl    = false
+  follow_redirects = true
+  status_codes    = ["200", "301", "302"]
+  tags            = ["comics", "monitoring"]
+}
+
+
+Oppgave 4: 
+Håndtering av Terraform State
+
+Problemet med nåværende tilnærming
+For øyeblikket blir `terraform.tfstate` sjekket inn i GitHub-repositoryet sammen med koden. Dette kan fungere i starten, men etter hvert som teamet vokser, kan det føre til flere problemer:
+
+1. State-filkonflikter
+   - Når flere utviklere jobber med Terraform samtidig, kan `terraform.tfstate` bli overskrevet ved push og pull, noe som fører til mistede endringer.
+   - Hvis en utvikler har en lokal state-fil og en annen utvikler gjør en oppdatering i repositoryet, kan Terraform-planene bli utdaterte eller feile.
+
+2. Manglende låsemekanismer
+   - Terraform state bør låses slik at kun én person eller prosess kan utføre Terraform-kommandoer samtidig. Uten dette kan flere `terraform apply`-operasjoner kjøre parallelt og skape uforutsigbare resultater.
+
+3. Sikkerhetsrisiko
+   - `terraform.tfstate` kan inneholde sensitive data, som API-nøkler eller passord. Hvis denne filen sjekkes inn i et offentlig eller delt repository, kan det føre til datalekkasjer.
+
+4. Manglende historikk og rollback
+   - Ved bruk av en lokal eller sjekket-inn state-fil finnes det ingen innebygd versjonskontroll eller rollback-mekanismer. Hvis noe går galt, kan det være vanskelig å gjenopprette tidligere infrastrukturtilstander.
+
+Bedre Mekanismer for Terraform State-håndtering
+
+En bedre tilnærming er å lagre `terraform.tfstate` på en sentralisert, sikker og låsbar backend. 
+
+Her er tre gode alternativer:
+1. S3 Bucket med DynamoDB-lås (AWS)
+Terraform kan konfigureres til å bruke en S3-bucket for å lagre state-filen, med DynamoDB for låsing. Dette sikrer at:
+   - Terraform state er sentralt lagret og alltid oppdatert.
+   - DynamoDB-låsen forhindrer flere Terraform-operasjoner samtidig.
+   - Versjonering kan aktiveres på S3-bucketen for enkel rollback.
+
+Eksempel på backend-konfigurasjon:
+terraform {
+  backend "s3" {
+    bucket         = "my-terraform-state"
+    key            = "terraform.tfstate"
+    region         = "us-east-1"
+    encrypt        = true
+    dynamodb_table = "terraform-lock"
+  }
+}
+
+2. Terraform Cloud eller Terraform Enterprise
+Terraform Cloud gir en innebygd løsning for state-håndtering med:
+   - Automatisk state-lagring.
+   - Låsemekanismer.
+   - Versjonskontroll og rollback.
+   - Integrasjon med CI/CD-pipelines.
+
+Aktivering av Terraform Cloud backend:
+terraform {
+  backend "remote" {
+    hostname     = "app.terraform.io"
+    organization = "my-org"
+
+    workspaces {
+      name = "my-workspace"
+    }
+  }
+}
+
+3. Remote State med Azure Blob Storage eller Google Cloud Storage
+For team som bruker Azure eller GCP, kan Terraform state lagres i Azure Blob Storage eller Google Cloud Storage (GCS). Begge gir sentralisert lagring og versjonskontroll.
+
+Eksempel for Azure:
+terraform {
+  backend "azurerm" {
+    resource_group_name  = "my-resource-group"
+    storage_account_name = "mystorageaccount"
+    container_name       = "tfstate"
+    key                  = "terraform.tfstate"
+  }
+}
+
+Konklusjon
+For et voksende team er det viktig å ikke sjekke inn state-filen i GitHub. I stedet bør man bruke en remote backend med låsemekanismer, for eksempel:
+- S3 + DynamoDB (AWS)
+- Terraform Cloud
+- Azure Blob Storage
+- Google Cloud Storage
+
+Ved å implementere en av disse løsningene kan vi:
+- Unngå konflikter når flere utviklere jobber samtidig.  
+- Sikre state-filen mot utilsiktet sletting eller overskriving.  
+- Beskytte sensitiv infrastrukturdata.  
+- Få versjonskontroll og rollback-funksjonalitet.  
