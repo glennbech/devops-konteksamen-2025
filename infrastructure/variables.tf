@@ -6,7 +6,7 @@ variable "statuscake_api_token" {
 variable "contact_group_name" {
   description = "Navn på kontaktgruppen"
   type        = string
-  default     = "DevOps Team 10"
+  default     = "DevOps Team 20"
 }
 
 variable "contact_group_emails" {
