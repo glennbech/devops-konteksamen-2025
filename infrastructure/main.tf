@@ -1,35 +1,39 @@
 terraform {
   required_providers {
     statuscake = {
-      source = "StatusCakeDev/statuscake"
+      source  = "StatusCakeDev/statuscake"
       version = "2.2.2"
     }
   }
 }
 
+provider "statuscake" {
+  api_token = var.statuscake_api_token
+}
+
+resource "statuscake_contact_group" "default" {
+  name  = var.contact_group_name
+  email = var.contact_group_emails
+}
+
 resource "statuscake_uptime_check" "example" {
-  check_interval = 300
-  confirmation   = 3
-  name           = "example-site"
-  trigger_rate   = 10
+  check_interval = var.check_interval
+  confirmation   = var.confirmation
+  name           = var.uptime_check_name
+  trigger_rate   = var.trigger_rate
 
   http_check {
-    timeout          = 20
-    validate_ssl     = true
-    status_codes = [
-      "200"
-    ]
+    timeout      = var.http_timeout
+    validate_ssl = var.validate_ssl
+    status_codes = var.status_codes
   }
 
   monitored_resource {
-    address = "https://www.example.com"
+    address = var.monitored_address
   }
-  tags = [
-    "production",
-  ]
+  tags = var.tags
 }
 
 output "example_com_uptime_check_id" {
   value = statuscake_uptime_check.example.id
 }
-# Dette er en test for CI/CD

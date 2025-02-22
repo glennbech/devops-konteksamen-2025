@@ -34,10 +34,10 @@ jobs:
         working-directory: ${{ env.TF_DIR }}
 
       - name: Terraform Plan
-        run: terraform plan -out=tfplan
+        run: terraform plan -var="statuscake_api_token=${{ secrets.STATUSCAKE_API_TOKEN }}" -out=tfplan
         working-directory: ${{ env.TF_DIR }}
 
       - name: Apply Terraform (only on main)
         if: github.ref == 'refs/heads/main'
-        run: terraform apply -auto-approve tfplan
+        run: terraform apply -var="statuscake_api_token=${{ secrets.STATUSCAKE_API_TOKEN }}" -auto-approve tfplan
         working-directory: ${{ env.TF_DIR }}
