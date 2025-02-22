@@ -32,3 +32,4 @@ resource "statuscake_uptime_check" "example" {
 output "example_com_uptime_check_id" {
   value = statuscake_uptime_check.example.id
 }
+# Dette er en test for CI/CD
