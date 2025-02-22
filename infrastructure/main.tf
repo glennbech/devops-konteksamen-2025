@@ -16,25 +16,42 @@ resource "statuscake_contact_group" "default" {
   email_addresses = var.contact_group_emails
 }
 
-
-resource "statuscake_uptime_check" "example" {
-  check_interval = var.check_interval
-  confirmation   = var.confirmation
-  name           = var.uptime_check_name
-  trigger_rate   = var.trigger_rate
-
-  http_check {
-    timeout      = var.http_timeout
-    validate_ssl = var.validate_ssl
-    status_codes = var.status_codes
-  }
-
-  monitored_resource {
-    address = var.monitored_address
-  }
-  tags = var.tags
+# Bruker Terraform-modulen til å overvåke to nettsider
+module "uptime_check_vg" {
+  source          = "../modules/statuscake_uptime"
+  name            = "VG Uptime Check"
+  address         = "https://www.vg.no"
+  check_interval  = 300
+  confirmation    = 3
+  trigger_rate    = 10
+  timeout         = 50
+  validate_ssl    = false  # Midlertidig for testing
+  request_method  = "HTTP"
+  follow_redirects = true
+  status_codes    = ["200"]
+  tags            = ["news", "monitoring"]
 }
 
-output "example_com_uptime_check_id" {
-  value = statuscake_uptime_check.example.id
+module "uptime_check_xkcd" {
+  source          = "../modules/statuscake_uptime"
+  name            = "XKCD Uptime Check"
+  address         = "https://xkcd.com"
+  check_interval  = 300  # Endret fra 600 til 300 (tillatt verdi)
+  confirmation    = 3
+  trigger_rate    = 5
+  timeout         = 50
+  validate_ssl    = false  # Midlertidig for testing
+  request_method  = "HTTP"
+  follow_redirects = true
+  status_codes    = ["200"]
+  tags            = ["comics", "monitoring"]
+}
+
+# Output for begge sjekkene
+output "vg_uptime_check_id" {
+  value = module.uptime_check_vg.uptime_check_id
+}
+
+output "xkcd_uptime_check_id" {
+  value = module.uptime_check_xkcd.uptime_check_id
 }
