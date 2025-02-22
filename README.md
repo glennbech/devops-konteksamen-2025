@@ -1,104 +1,104 @@
-# PGR301 DevOps i skyen -Gjentak: 72 timers skriftlig individuell hjemmeeksamen
+Oppgave 1: Sikkerhet og forbedring av CI/CD-pipelinen
 
-## Krav til leveransen
+Endringer i CI/CD-pipelinen:
+I denne oppgaven har jeg forbedret GitHub Actions workflowen for Terraform for å implementere en automatisert og sikker CI/CD-pipeline.
 
-**Eksamensoppgaven, kode og nødvendige filer er tilgjengelig i GitHub-repoet:**  
-[https://github.com/glennbechdevops/eksamen-2025-konte](https://github.com/glennbechdevops/eksamen-2025-konte)
+Endringer jeg har gjort:
+- Feature branches: Workflowen kjører `terraform plan`, men ikke `terraform apply`.
+- Main branch: Workflowen kjører både `terraform plan` og `terraform apply` automatisk.
+- Sikring av API-nøkler: Jeg har fjernet hardkodede verdier og erstattet dem med GitHub Secrets.
+- Fjerning av Terraform state commit: Terraform state-filen blir ikke sjekket inn i repositoryet.
 
-### Retningslinjer for innlevering
+Håndtering av sensitive verdier:
+For å sikre at API-nøkler ikke er hardkodet i kildekoden, har jeg implementert en løsning ved bruk av GitHub Secrets:
+1. Jeg har lagret API-nøkkelen i GitHub Secrets under navnet `STATUSCAKE_API_TOKEN`.
+2. Workflowen refererer til denne verdien ved bruk av:
+   env:
+     STATUSCAKE_API_TOKEN: ${{ secrets.STATUSCAKE_API_TOKEN }}
 
-### **WiseFlow:**
-* Når du leverer oppgaven i WiseFlow, last opp et dokument som kun inneholder en lenke til ditt repository. Filen må være i enten PDF- eller tekstformat.
+Oppdatert GitHub Actions workflow.
 
-### **GitHub:**
-* Du kan enten lage en fork av dette repositoryet eller kopiere filene inn i et nytt repository.
-* For å unngå at andre studenter ser din besvarelse, anbefales det å jobbe i et privat repository. Gjør repositoryet offentlig rett før innleveringsfristen.
-* I repositoryet ditt skal du opprette en fil, `README.md`, hvor du besvarer drøfteoppgaver og dokumenterer oppgavespesifikke leveranser.
+Den oppdaterte `hellow_world.yml` ser slik ut nå:
+name: Terraform Pipeline
 
+on:
+  push:
+    branches:
+      - main
+      - 'feature/**'
+  pull_request:
+    branches:
+      - main
 
+permissions:
+  contents: write
 
-# Bakgrunn
+env:
+  TF_STATE_FILE: "terraform.tfstate"
+  TF_DIR: "infrastructure"
+  STATUSCAKE_API_TOKEN: ${{ secrets.STATUSCAKE_API_TOKEN }}
 
-Din bedrift har nylig begynt å bruke [StatusCake](https://www.statuscake.com/) for overvåking av tilgjengelighet. 
+jobs:
+  terraform:
+    name: Terraform Workflow
+    runs-on: ubuntu-latest
 
-Som en del av selskapets **DevOps-reise** er det besluttet å implementere **"overvåking som kode"** for å sikre en mer systematisk og reproduserbar tilnærming. Valget har falt på **Terraform** for infrastrukturadministrasjon og **GitHub Actions** for CI/CD. 
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v1
 
+      - name: Initialize Terraform
+        run: terraform init
+        working-directory: ${{ env.TF_DIR }}
 
-## Eksisterende oppsett
+      - name: Terraform Plan
+        run: terraform plan -out=tfplan
+        working-directory: ${{ env.TF_DIR }}
 
-Du har fått utdelt et **Terraform-prosjekt**, lokalisert i mappen `infrastructure/`.
-
-### Prosjektets innhold
-
-1. **Enkel Terraform-konfigurasjon**
-  - Inneholder hardkodede API-nøkler i `provider`-blokken.
-
-2. **Enkel alarm for én nettside**
-  - Bruker hardkodede verdier, noe som gjør koden lite gjenbrukbar.
-
-3. **CI/CD-pipeline**
-  - Automatisert utrulling av oppsettet, men ikke implementert i tråd med god DevOps-praksis.
-
-
-
-
-
-### 0.  Generelt 
-
-* For å løse oppgaven anbefales det å opprette en gratis 7-dagers prøveperiode hos StatusCake: [Registrer deg her](https://www.statuscake.com/).
-* Bruk litt tid på å bli kjent med tjenesten og konseptene. Det vil hjelpe deg med å skrive infrastrukturkoden.
-* Prøv gjerne å kjøre Terraform lokalt før du bruker GitHub Actions for å spare tid.
-* Når du skal overvåke en nettside, kan du velge et vilkårlig domene, for eksempel [VG](https://www.vg.no) eller [xkcd](https://xkcd.com/).
-
- 
-
-### 1. Sikkerhet og forbedring av CI/CD-pipelinen (30 poeng)
-
-For øyeblikket er workflowen konfigurert for manuell oppstart. Dette krever at man navigerer til GitHub i nettleseren, åpner "Actions" og deretter velger "Run workflow".  
-I tillegg ser det ut til at en API-nøkkel for StatusCake er hardkodet i koden – noe som er en alvorlig sikkerhetsrisiko.
-
-Din oppgave er å gjennomføre følgende endringer:
-
-- **GitHub Actions Workflow:**
-  - På feature branches skal workflowen kjøre `terraform plan`, men ikke `terraform apply`.
-  - På main branch skal både `terraform plan` og `terraform apply` utføres automatisk.
-
-- **Håndtering av sensitive verdier:**
-  - Infrastrukturkoden og GitHub Actions workflowen skal ikke inneholde hardkodede hemmeligheter, som for eksempel Status CAKE sin API-nøkkel. Beskriv og implementer en sikker løsning for håndtering av sensitive verdier.
+      - name: Apply Terraform (only on main)
+        if: github.ref == 'refs/heads/main'
+        run: terraform apply -auto-approve tfplan
+        working-directory: ${{ env.TF_DIR }}
 
 
+Testing av løsningen
+For å verifisere at workflowen fungerer som forventet, har jeg gjennomført følgende tester:
+
+Test 1: Feature branch
+1. Opprettet en ny feature branch:
   
-### 2. Forbedring- og utvidelse av Terraform koden (30 poeng)
+   git checkout -b feature/test-ci-cd
+   
+2. Gjorde en liten endring i `main.tf` for å trigge workflowen.
 
-* Erstatt hardkodede verdier med variabler der det gir mening
-* Sett deg inn i StatusCake sin Terraform-provider (https://registry.terraform.io/providers/StatusCakeDev/statuscake/latest/docs) og utvid koden med flere ressurser. 
-* Du må som et minimum opprette en contact_group, men du står fritt til å legge til flere ressurser etter eget ønske.
-* Lag en kort beskrivelse av valgene dine for overvåkning, terskelverdier mm. 
+3. Commitet og pushet endringen:
 
+   git add infrastructure/main.tf
+   git commit -m "Test: Oppdaterte Terraform-konfig for CI/CD-test"
+   git push origin feature/test-ci-cd
+   
+4. Verifiserte at kun `terraform plan` kjørte i GitHub Actions, og at `terraform apply` ble hoppet over.
 
+Test 2: Merge til main
+1. Byttet til `main` branch og slo sammen endringene:
+  
+   git checkout main
+   git merge feature/test-ci-cd
+   
+2. Pushet endringene til `main`:
+   
+   git push origin main
+  
+3. Verifiserte i GitHub Actions at både `terraform plan` og `terraform apply` kjørte automatisk.
 
-### 3. Terraform-moduler (30 poeng)
+Dette kan man se under actions i workflowene kalt "test".
 
-En av de store fordelene med Terraform er muligheten til å skrive gjenbrukbar infrastrukturkode. Siden flere avdelinger i bedriften kan ha behov for overvåkning med StatusCake, ønsker vi å lage en gjenbrukbar modul.
+Test 3: Sikring av API-nøkler
+1. Sjekket at StatusCake API-token ikke var synlig i noen av loggene i GitHub Actions.
+2. Bekreftet at Terraform kunne opprette StatusCake-ressurser ved bruk av API-nøkkelen fra GitHub Secrets.
 
-I evalueringen vektlegges brukervennligheten til modulen – for eksempel ved at den setter fornuftige standardverdier for terskelverdier og andre innstillinger. Samtidig bør modulen gi brukerne mulighet til å overstyre disse variablene ved behov.
-
-**Oppgave:**
-- Utvid Terraform-koden slik at den kan overvåke flere nettsider. For å unngå repetisjon av kode skal du bruke **Terraform-moduler**.
-- Lag en modul og bruk den to ganger med ulike verdier for minst to forskjellige nettsider.
-
-
-
-### 4. Håndtering av Terraform State (10 poeng)
-
-Som du kanskje har lagt merke til, er håndteringen av `Terraform state` ikke optimal. For øyeblikket har teamet valgt å sjekke inn Terraform state-filen i GitHub sammen med koden.
-
-**Oppgave:**
-Drøft følgende; 
-
-- I starten kan denne tilnærmingen fungere, men hvilke konsekvenser kan det få når teamet vokser og flere utviklere jobber med samme repository samtidig?
-- Hvilke mekanismer kan brukes for å håndtere Terraform state på en bedre måte?
-
-LYKKE TIL MED OPPGAVEN!
+Testene bekreftet at workflowen fungerer som spesifisert i oppgaven.
 
