@@ -1,3 +1,62 @@
+Hvordan kjøre og teste Terraform-konfigurasjonen:
+For å kjøre og teste Terraform-oppsettet med StatusCake, følg disse stegene:
+
+1. Klon repositoryet
+Først må du klone repositoryet ditt til din lokale maskin:
+git clone https://github.com/ym2806/devops-konteksamen-2025.git
+
+cd devops-konteksamen-2025/infrastructure
+
+2. Installer Terraform
+Terraform må være installert på systemet ditt.
+Bekreft installasjonen med:
+terraform version
+
+3. Sett opp API-token i GitHub Secrets -siden hver konto har sin egen token.
+Før Terraform kan kjøre StatusCake-konfigurasjonen, må du sette opp API-tokenet ditt som en GitHub Secret:
+
+Gå til repositoryet ditt på GitHub.
+Klikk på Settings > Secrets and variables > Actions.
+Klikk New repository secret.
+Sett Name: STATUSCAKE_API_TOKEN
+Sett Value: Ditt API-token fra StatusCake. Denne finner du ved å lage en konto på StatusCake og du finner den på nederste del av siden "My account".
+
+4. Initialiser Terraform
+Når du har satt opp API-tokenet, må du initialisere Terraform:
+terraform init i cd devops-konteksamen-2025/infrastructure
+
+-Dette laster ned nødvendige provider-moduler og setter opp Terraform.
+
+5. Planlegg endringer
+Kjør følgende kommando for å se hvilke endringer Terraform vil gjøre:
+Terraform plan
+
+-Terraform vil vise en oversikt over ressursene den planlegger å opprette eller endre.
+
+6. Kjør Terraform Apply
+Hvis alt ser riktig ut, kan du kjøre:
+terraform apply -auto-approve
+
+-Dette vil opprette eller oppdatere StatusCake-ressursene basert på konfigurasjonen.
+
+7. Verifiser at overvåkningen fungerer
+Logg inn på StatusCake Dashboard.
+Gå til Uptime Monitoring og sjekk at VG og XKCD-oppetidssjekkene er opprettet.
+Se om de viser "UP" eller "DOWN".
+
+8. Feilsøking
+Hvis noe ikke fungerer, prøv følgende:
+
+Sjekk Terraform-loggene:
+terraform show
+
+-Slett eksisterende tester manuelt i StatusCake og kjør terraform apply på nytt.
+-Endre status_codes i Terraform-konfigurasjonen hvis StatusCake tolker svar feil.
+-Sjekk GitHub Actions-loggene for feil i CI/CD-oppsettet.
+
+-Hvis ingen av disse feilsøkingsmetodene hjalp kan du sjekke metodene i eksamensbesvarelsen under.
+
+Eksamensbesvarelse DevOps 2025
 Oppgave 1: 
 Sikkerhet og forbedring av CI/CD-pipelinen
 
@@ -16,8 +75,6 @@ For å sikre at API-nøkler ikke er hardkodet i kildekoden, har jeg implementert
 2. Workflowen refererer til denne verdien ved bruk av:
    env:
      STATUSCAKE_API_TOKEN: ${{ secrets.STATUSCAKE_API_TOKEN }}
-
-Oppdatert GitHub Actions workflow.
 
 Den oppdaterte `hellow_world.yml` ser slik ut nå:
 name: Terraform Pipeline
@@ -95,21 +152,19 @@ Test 2: Merge til main
   
 3. Verifiserte i GitHub Actions at både `terraform plan` og `terraform apply` kjørte automatisk.
 
-Dette kan man se under actions i workflowene kalt "test".
-
 Test 3: Sikring av API-nøkler
 1. Sjekket at StatusCake API-token ikke var synlig i noen av loggene i GitHub Actions.
 2. Bekreftet at Terraform kunne opprette StatusCake-ressurser ved bruk av API-nøkkelen fra GitHub Secrets.
 
-Testene bekreftet at workflowen fungerer som spesifisert i oppgaven.
+Testene bekreftet at workflowen fungerer som spesifisert i oppgaven. Dette kan man se under actions i workflowene kalt "test" og du kan prøve det selv.
+
 
 Oppgave 2: 
 Forbedring og utvidelse av Terraform-koden
 
 Under utviklingen av oppgave 2 oppstod det problemer med branches og .gitignore filen. Derfor måtte jeg slette progresjonen min og resette oppgaven.
 
-
-Endringer i Terraform-konfigurasjonen
+Endringer i Terraform-konfigurasjonen-
 I denne oppgaven har jeg forbedret og utvidet Terraform-koden ved å:
 1. Erstatte hardkodede verdier med variabler** for mer fleksibilitet.  
 2. Legge til en `contact_group`-ressurs** for StatusCake med støtte for e-postvarsler.  
@@ -137,10 +192,10 @@ Endringer i `hellow_world.yml`:
 2. Terraform plan og apply kjører som før, men med oppdaterte parametere.
 
 Test av løsningen:
-FFor å sikre at alt fungerer som forventet, har jeg kjørt flere tester:
+For å sikre at alt fungerer som forventet, har jeg kjørt flere tester:
 
 Test 1: Terraform Plan
-Gjorde en liten oppdatering i main.tf og pushet til en feature branch.
+Gjorde en liten oppdatering/kommentar i main.tf og pushet til en feature branch.
 - Terraform Plan kjørte vellykket, og viste at en ny contact_group skulle opprettes.
 
 Test 2: Terraform Apply på main
@@ -170,25 +225,18 @@ resource "statuscake_contact_group" "default" {
   email_addresses = var.contact_group_emails
 }
 
-
 Min midlertidige løsning for å bare gå videre med oppgaven var en manuell endring av navnet.
-Jeg må bare bytte navnet for hver gang:
+Jeg må foreløpig bytte navnet for hver gang:
 variable "contact_group_name" {
   description = "Navn på kontaktgruppen"
   type        = string
   default     = "DevOps Team 30"
 }
 
-Hver gang jeg gjorde en ny terraform apply, måtte jeg endre navnet.
-
-Løsningen har noen konsekvenser. Terraform kunne ikke håndtere kontaktgruppen automatisk. Hvis noen andre på teamet prøvde å kjøre terraform apply uten å endre navnet, ville de møte samme feil. Dette kunne føre til inkonsistens i terraform state, siden kontaktgruppen ikke kunne oppdateres riktig.
+Løsningen har dessverre noen konsekvenser. Terraform kunne ikke håndtere kontaktgruppen automatisk. Hvis noen andre på teamet prøvde å pushe til git uten å endre navnet, ville de møte samme feil. Dette kunne føre til inkonsistens siden kontaktgruppen ikke kunne oppdateres riktig. Men under Terraform apply funker dette fint uten å endre navn.
 
 Konklusjon
-Terraform-konfigurasjonen er nå mer fleksibel og inkluderer en `contact_group` med varsling. CI/CD fungerer som forventet, og StatusCake-miljøet er riktig konfigurert, men det er problem med opprettelse av kontaktgruppe navn ved hver push til git. Jeg brukte mye tid på å prøve å få Terraform til å opprette kontaktgruppen automatisk uten å få navnekonflikt, men ingen av løsningene ble akseptert av StatusCake eller Terraform.
-
-For å kunne fullføre oppgaven måtte vi derfor bruke en manuell løsning, hvor vi endret navnet på kontaktgruppen for hver terraform apply-kjøring.
-
-Selv om dette tillot oss å gå videre, er dette en svakhet i løsningen som bør forbedres i fremtidige iterasjoner.
+Terraform-konfigurasjonen er nå mer fleksibel og inkluderer en `contact_group` med varsling. CI/CD fungerer som forventet, og StatusCake-miljøet er riktig konfigurert, men det er problem med opprettelse av kontaktgruppe navn ved hver push til git. Jeg brukte mye tid på å prøve å få Terraform til å opprette kontaktgruppen automatisk uten å få navnekonflikt, men ingen av løsningene ble akseptert av StatusCake eller Terraform og jeg måtte eventuelt gå videre. 
 
 Oppgave 3: 
 Terraform-moduler
@@ -210,23 +258,30 @@ Endringer og Implementasjon
 
 Eksempel på hvordan modulen brukes:
 module "uptime_check_vg" {
-  source          = "../modules/statuscake_uptime"
-  name            = "VG Uptime Check"
-  address         = "https://www.vg.no"
-  check_interval  = 300
-  confirmation    = 3
-  trigger_rate    = 10
-  timeout         = 50
-  validate_ssl    = true
-  follow_redirects = true
-  status_codes    = ["200", "301", "302"]
-  tags            = ["news", "monitoring"]
+  source           = "../modules/statuscake_uptime"
+  name             = "VG Uptime Check"
+  address          = "https://www.vg.no"
+  check_interval   = 900
+  confirmation     = 3
+  trigger_rate     = 10
+  timeout          = 75 
+  validate_ssl     = false  # Deaktivert SSL-validering
+  follow_redirects = true   # Tillater redirects
+  request_method   = "HTTP"
+  status_codes = [
+  "200", "201", "204", "205", "206", "303", "400", "401", "403", 
+  "404", "405", "406", "408", "409", "410", "413", "429", "444", 
+  "494", "495", "496", "499", "500", "501", "502", "503", "504", 
+  "505", "506", "507", "508", "509", "510", "511", "521", "522", "523"
+]
+  tags             = ["news", "monitoring"]
+contact_group_id = [statuscake_contact_group.default.id]
 }
 
 Problemer og Feilsøking
-Etter å ha implementert Terraform-modulen for StatusCake-overvåkning av to nettsider (VG.no og XKCD.com), oppstod en kritisk feil: Begge oppetidssjekkene gikk fra "UP" til "DOWN" etter noen sekunder, selv om nettsidene var tilgjengelige.
+Etter å ha implementert Terraform-modulen for StatusCake-overvåkning av to nettsider (VG.no og XKCD.com), oppstod en kritisk feil: Begge oppetidssjekkene gikk først til å være "DOWN" hele tiden, og så til "UP" til "DOWN" etter noen sekunder ved videre implementering, selv om nettsidene var tilgjengelige.
 
-Forventet resultat var at Terraform skulle opprette fungerende overvåkninger, men StatusCake meldte umiddelbar nedetid, til tross for at nettsidene returnerte HTTP 200-statuskode når de ble manuelt sjekket.
+Forventet resultat var at Terraform skulle opprette fungerende overvåkninger, men StatusCake meldte nedetid, til tross for at nettsidene returnerte HTTP 200-statuskode når de ble manuelt sjekket. Jeg prøvde en del forskjellige metoder før jeg måtte gå videre:
 
 1. Manuell sjekking av nettadresser med curl
 Første steg var å teste nettsidene manuelt for å se om de faktisk var tilgjengelige.
@@ -251,7 +306,7 @@ variable "status_codes" {
   default     = ["200", "301", "302", "403"]
 }
 
-Vi utvidet listen basert på hva vi fant på StatusCake sin egen oppsett av tester:
+Jeg utvidet listen basert på hva man fant på StatusCake sin egen oppsett av tester:
 
 variable "status_codes" {
   description = "Tillatte HTTP-statuskoder"
@@ -265,7 +320,7 @@ variable "status_codes" {
 }
 
 Resultat:
-Dette løste ikke problemet, men tiden den var oppe var lengre. StatusCake rapporterte fortsatt at sjekkene var nede eventuelt, selv når sidene returnerte HTTP 200.
+Dette løste ikke problemet, men tiden den var oppe var lengre. StatusCake rapporterte fortsatt at sjekkene var nede etter litt tid, selv når sidene returnerte HTTP 200.
 
 3. Endring av request_method fra "HEAD" til "HTTP"
 Terraform-modulen var satt opp til å bruke "HEAD" som request_method, men jeg tenkte at kanskje noen nettsider returneree uventede resultater på en HEAD-forespørsel. Jeg endret request_method til "GET" for å simulere en normal nettleserforespørsel.
@@ -280,7 +335,7 @@ http_check {
 }
 
 Resultat:
-Dette løste ikke problemet alene, men bidro til mer konsistente testresultater i StatusCake.
+Dette løste ikke problemet alene, men bidro til mer konsistente testresultater i StatusCake da testen var "UP" i en lengre periode.
 
 4. Fjerning av gamle oppetidssjekker i StatusCake
 Det var mulig at StatusCake ikke håndterte Terraform-endringer korrekt, og at gamle sjekker fortsatt påvirket resultatene. Jeg slettet alle testene manuelt og prøvde på nytt.
@@ -290,40 +345,31 @@ Dette hjalp en del, da det fjernet flere av de gamle konfigurasjonene som mulige
 Sjekkene viste "UP" en stund lengre, men gikk tilbake til "DOWN" etter noen sekunder.
 
 Konklusjon
-Vi prøvde alle mulige feilsøkingsmetoder vi kunne tenke oss, men problemet forble uløst. StatusCake fortsatte å rapportere at sjekkene var "DOWN" selv når de fikk HTTP 200. Den mest sannsynlige feilkilden kan være at jeg har skrevet noe feil. Det er en del redundans i filene, noe som ikke har skap noen problemer i de tidligere oppgavene, men som kanskje skader progresjonen til oppgave 3.
+Jeg prøvde alle mulige feilsøkingsmetoder man kunne tenke, men problemet forble uløst. StatusCake fortsatte å rapportere at sjekkene var "DOWN" etter noen sekunder/minutter selv når de fikk HTTP 200. Den mest sannsynlige feilkilden kan være at jeg har skrevet noe feil. Det er en del redundans i filene, spesielt i main og variabel filene, noe som ikke har skap noen problemer i de tidligere oppgavene, men som kanskje skader progresjonen til oppgave 3. Det kan også være DNS eller serverbaserte blokkeringer da StatusCake sine overvåkingsservere kan være blokkert. Tidligere under øving for eksamen så opplevde jeg problemer med både wifi og DNS serverne på min laptop, spesielt da jeg øvde på Docker.
 
 
 Oppgave 4: 
 Håndtering av Terraform State
 
-Problemet med nåværende tilnærming
-For øyeblikket blir `terraform.tfstate` sjekket inn i GitHub-repositoryet sammen med koden. Dette kan fungere i starten, men etter hvert som teamet vokser, kan det føre til flere problemer:
+Siden `terraform.tfstate` for øyeblikket blir sjekket inn i GitHub-repositoryet sammen med koden kan dette fungere i starten, men etter hvert som teamet vokser, føre til flere problemer.
 
-1. State-filkonflikter
-   - Når flere utviklere jobber med Terraform samtidig, kan `terraform.tfstate` bli overskrevet ved push og pull, noe som fører til mistede endringer.
-   - Hvis en utvikler har en lokal state-fil og en annen utvikler gjør en oppdatering i repositoryet, kan Terraform-planene bli utdaterte eller feile.
+Når flere utviklere arbeider med Terraform samtidig, kan terraform.tfstate bli overskrevet ved git push eller git pull, noe som kan føre til tap av data eller inkonsistente endringer i infrastrukturen. Hvis én utvikler kjører terraform apply og en annen kjører terraform plan med en utdatert state-fil, kan det føre til at Terraform ikke lenger har korrekt oversikt over infrastrukturen.
 
-2. Manglende låsemekanismer
-   - Terraform state bør låses slik at kun én person eller prosess kan utføre Terraform-kommandoer samtidig. Uten dette kan flere `terraform apply`-operasjoner kjøre parallelt og skape uforutsigbare resultater.
+Terraform har ingen innebygd mekanisme for å forhindre at flere utviklere utfører terraform apply samtidig når state-filen lagres lokalt. Dette kan resultere i parallelle oppdateringer, som igjen kan føre til inkonsistente eller uventede endringer i infrastrukturen.
 
-3. Sikkerhetsrisiko
-   - `terraform.tfstate` kan inneholde sensitive data, som API-nøkler eller passord. Hvis denne filen sjekkes inn i et offentlig eller delt repository, kan det føre til datalekkasjer.
+Terraform state-filen kan inneholde sensitive data, for eksempel API-nøkler, tilgangstokens eller IP-adresser til kritiske systemer. Dersom terraform.tfstate sjekkes inn i et offentlig eller delt repository, kan denne informasjonen potensielt bli eksponert og misbrukt.
 
-4. Manglende historikk og rollback
-   - Ved bruk av en lokal eller sjekket-inn state-fil finnes det ingen innebygd versjonskontroll eller rollback-mekanismer. Hvis noe går galt, kan det være vanskelig å gjenopprette tidligere infrastrukturtilstander.
+Når terraform.tfstate lagres lokalt eller i GitHub, er det ingen enkel måte å spore endringer eller rulle tilbake til tidligere versjoner hvis noe går galt. For å omgå dette problemet har jeg manuelt laget zip-kopier av terraform.tfstate før jeg kjørte terraform apply, men dette er en ineffektiv og sårbar metode sammenlignet med en skikkelig løsning.
 
-Bedre Mekanismer for Terraform State-håndtering
+En mer robust og skalerbar løsning er å lagre terraform.tfstate i en sentralisert, sikker og låsbar backend. Dette sikrer at teamet alltid har en oppdatert og konsistent state-fil, samtidig som det eliminerer sikkerhetsrisikoen ved å sjekke inn state-filen i GitHub.
 
-En bedre tilnærming er å lagre `terraform.tfstate` på en sentralisert, sikker og låsbar backend. 
-
-Her er tre gode alternativer:
 1. S3 Bucket med DynamoDB-lås (AWS)
-Terraform kan konfigureres til å bruke en S3-bucket for å lagre state-filen, med DynamoDB for låsing. Dette sikrer at:
-   - Terraform state er sentralt lagret og alltid oppdatert.
-   - DynamoDB-låsen forhindrer flere Terraform-operasjoner samtidig.
-   - Versjonering kan aktiveres på S3-bucketen for enkel rollback.
+Terraform kan konfigureres til å bruke en Amazon S3-bucket for å lagre state-filen, med DynamoDB for å håndtere låsemekanismer. Dette gir følgende fordeler:
 
-Eksempel på backend-konfigurasjon:
+Terraform state lagres sentralt og kan alltid hentes oppdatert.
+DynamoDB-låsen forhindrer at flere Terraform-operasjoner kjører samtidig.
+S3 har innebygd versjonering, slik at man kan rulle tilbake til tidligere versjoner hvis nødvendig.
+Eksempel på Terraform-konfigurasjon for S3-backend:
 terraform {
   backend "s3" {
     bucket         = "my-terraform-state"
@@ -334,13 +380,15 @@ terraform {
   }
 }
 
-2. Terraform Cloud eller Terraform Enterprise
-Terraform Cloud gir en innebygd løsning for state-håndtering med:
-   - Automatisk state-lagring.
-   - Låsemekanismer.
-   - Versjonskontroll og rollback.
-   - Integrasjon med CI/CD-pipelines.
+-Dette sikrer at Terraform kun tillater én operasjon om gangen og at state-filen er trygt lagret.
 
+2. Terraform Cloud eller Terraform Enterprise
+Terraform Cloud tilbyr en innebygd løsning for state-håndtering med flere fordeler:
+
+Automatisk lagring av state-filen i en sentral backend.
+Låsemekanismer som forhindrer parallelle terraform apply-operasjoner.
+Versjonskontroll, slik at man kan rulle tilbake ved feil.
+Mulighet for integrasjon med CI/CD-pipelines.
 Aktivering av Terraform Cloud backend:
 terraform {
   backend "remote" {
@@ -353,10 +401,19 @@ terraform {
   }
 }
 
-3. Remote State med Azure Blob Storage eller Google Cloud Storage
-For team som bruker Azure eller GCP, kan Terraform state lagres i Azure Blob Storage eller Google Cloud Storage (GCS). Begge gir sentralisert lagring og versjonskontroll.
+-Terraform Cloud gir en sømløs opplevelse for team som allerede bruker HashiCorp-verktøyene.
 
-Eksempel for Azure:
+3. Remote State med Azure Blob Storage eller Google Cloud Storage
+For team som bruker Microsoft Azure eller Google Cloud Platform, kan Terraform state lagres i:
+
+Azure Blob Storage
+Google Cloud Storage (GCS)
+Begge alternativene gir:
+
+Sentralisert lagring av state-filen.
+Versjonskontroll for rollback.
+Integrasjon med CI/CD.
+Eksempel på Terraform backend-konfigurasjon for Azure Blob Storage:
 terraform {
   backend "azurerm" {
     resource_group_name  = "my-resource-group"
@@ -366,15 +423,11 @@ terraform {
   }
 }
 
-Konklusjon
-For et voksende team er det viktig å ikke sjekke inn state-filen i GitHub. I stedet bør man bruke en remote backend med låsemekanismer, for eksempel:
-- S3 + DynamoDB (AWS)
-- Terraform Cloud
-- Azure Blob Storage
-- Google Cloud Storage
+-Dette sikrer en skalerbar løsning for Terraform state uten behov for manuell håndtering av state-filen.
 
-Ved å implementere en av disse løsningene kan vi:
-- Unngå konflikter når flere utviklere jobber samtidig.  
-- Sikre state-filen mot utilsiktet sletting eller overskriving.  
-- Beskytte sensitiv infrastrukturdata.  
-- Få versjonskontroll og rollback-funksjonalitet.  
+Konklusjon
+Å sjekke inn terraform.tfstate i GitHub er ikke en langsiktig løsning for et voksende DevOps-team. Ved å implementere en remote backend-løsning, som S3 + DynamoDB, Terraform Cloud eller Azure/GCP Storage, kan vi: Unngå state-filkonflikter når flere utviklere jobber samtidig.
+Sikre state-filen mot utilsiktet sletting eller overskriving.
+Beskytte sensitiv infrastrukturdata fra å bli eksponert.
+Få versjonskontroll og rollback-funksjonalitet.
+For å forbedre prosjektet ytterligere, bør Terraform-konfigurasjonen oppdateres til å bruke en remote backend, slik at state-filen alltid er oppdatert, låst og sikret mot tap eller konflikter
