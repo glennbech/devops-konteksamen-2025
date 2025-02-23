@@ -12,11 +12,13 @@ resource "statuscake_uptime_check" "this" {
   check_interval = var.check_interval
   confirmation   = var.confirmation
   trigger_rate   = var.trigger_rate
+  contact_groups = var.contact_group_id
+
 
   http_check {
+    request_method   = var.request_method
     timeout          = var.timeout
     validate_ssl     = var.validate_ssl
-    request_method   = var.request_method
     follow_redirects = var.follow_redirects
     status_codes     = var.status_codes
   }

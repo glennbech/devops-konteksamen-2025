@@ -29,7 +29,7 @@ variable "trigger_rate" {
 variable "timeout" {
   description = "Timeout for HTTP-sjekk (i sekunder)"
   type        = number
-  default     = 50
+  default     = 75
 }
 
 variable "validate_ssl" {
@@ -41,7 +41,7 @@ variable "validate_ssl" {
 variable "request_method" {
   description = "HTTP request method for the uptime check"
   type        = string
-  default     = "HTTP"
+  default     = "HEAD"
 }
 
 variable "follow_redirects" {
@@ -51,13 +51,18 @@ variable "follow_redirects" {
 }
 
 variable "status_codes" {
-  description = "Godkjente HTTP-statuskoder"
+  description = "Tillatte HTTP-statuskoder"
   type        = list(string)
-  default     = ["200"]
+  default     = ["200", "301", "302","403"]
 }
 
 variable "tags" {
   description = "Liste over tags for overvåkningstjenesten"
   type        = list(string)
   default     = ["production"]
+}
+
+variable "contact_group_id" {
+  description = "Liste over contact group IDs"
+  type        = list(string)
 }

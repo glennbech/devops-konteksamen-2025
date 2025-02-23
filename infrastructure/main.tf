@@ -15,36 +15,51 @@ resource "statuscake_contact_group" "default" {
   name            = var.contact_group_name
   email_addresses = var.contact_group_emails
 }
+output "contact_group_id" {
+  value = statuscake_contact_group.default.id
+}
 
 # Bruker Terraform-modulen til å overvåke to nettsider
 module "uptime_check_vg" {
-  source          = "../modules/statuscake_uptime"
-  name            = "VG Uptime Check"
-  address         = "https://www.vg.no"
-  check_interval  = 300
-  confirmation    = 3
-  trigger_rate    = 10
-  timeout         = 50
-  validate_ssl    = false  # Midlertidig for testing
-  request_method  = "HTTP"
-  follow_redirects = true
-  status_codes    = ["200"]
-  tags            = ["news", "monitoring"]
+  source           = "../modules/statuscake_uptime"
+  name             = "VG Uptime Check"
+  address          = "https://www.vg.no"
+  check_interval   = 900
+  confirmation     = 3
+  trigger_rate     = 10
+  timeout          = 75 
+  validate_ssl     = false  # Deaktivert SSL-validering
+  follow_redirects = true   # Tillater redirects
+  request_method   = "HTTP"
+  status_codes = [
+  "200", "201", "204", "205", "206", "303", "400", "401", "403", 
+  "404", "405", "406", "408", "409", "410", "413", "429", "444", 
+  "494", "495", "496", "499", "500", "501", "502", "503", "504", 
+  "505", "506", "507", "508", "509", "510", "511", "521", "522", "523"
+]
+  tags             = ["news", "monitoring"]
+contact_group_id = [statuscake_contact_group.default.id]
 }
 
 module "uptime_check_xkcd" {
-  source          = "../modules/statuscake_uptime"
-  name            = "XKCD Uptime Check"
-  address         = "https://xkcd.com"
-  check_interval  = 300  # Endret fra 600 til 300 (tillatt verdi)
-  confirmation    = 3
-  trigger_rate    = 5
-  timeout         = 50
-  validate_ssl    = false  # Midlertidig for testing
-  request_method  = "HTTP"
+  source           = "../modules/statuscake_uptime"
+  name             = "XKCD Uptime Check"
+  address          = "https://xkcd.com"
+  check_interval   = 900
+  confirmation     = 3
+  trigger_rate     = 2
+  timeout          = 75
+  validate_ssl     = false
   follow_redirects = true
-  status_codes    = ["200"]
-  tags            = ["comics", "monitoring"]
+  request_method   = "HTTP"
+  status_codes = [
+  "200", "201", "204", "205", "206", "303", "400", "401", "403", 
+  "404", "405", "406", "408", "409", "410", "413", "429", "444", 
+  "494", "495", "496", "499", "500", "501", "502", "503", "504", 
+  "505", "506", "507", "508", "509", "510", "511", "521", "522", "523"
+]
+  tags             = ["comics", "monitoring"]
+contact_group_id = [statuscake_contact_group.default.id]
 }
 
 # Output for begge sjekkene

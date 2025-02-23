@@ -56,12 +56,12 @@ jobs:
         working-directory: ${{ env.TF_DIR }}
 
       - name: Terraform Plan
-        run: terraform plan -out=tfplan
+        run: terraform plan -var="statuscake_api_token=${{ secrets.STATUSCAKE_API_TOKEN }}" -out=tfplan
         working-directory: ${{ env.TF_DIR }}
 
       - name: Apply Terraform (only on main)
         if: github.ref == 'refs/heads/main'
-        run: terraform apply -auto-approve tfplan
+        run: terraform apply -var="statuscake_api_token=${{ secrets.STATUSCAKE_API_TOKEN }}" -auto-approve tfplan
         working-directory: ${{ env.TF_DIR }}
 
 
@@ -152,8 +152,43 @@ Test 3: E-postvarsling
 E-postadressen ble registrert i StatusCake.
 -Bekreftet at Terraform output viste riktig ID for contact_group.
 
+Problemer:
+Under implementeringen av statuscake_contact_group i Terraform oppstod en feil hvor StatusCake ikke godtok kontaktgruppenavnet. Dette skjedde etter første push. Feilmeldingen var:
+
+│ Error: failed to create contact group: The provided parameters are invalid. Check the errors output for detailed information.: name contains violations
+│ 
+│   with statuscake_contact_group.default,
+│   on main.tf line 14, in resource "statuscake_contact_group" "default":
+│   14: resource "statuscake_contact_group" "default" {
+│ 
+│ The name is already taken. Choose a unique name.
+
+-Dette betyr at StatusCake nektet å opprette en ny kontaktgruppe fordi navnet allerede var tatt. Jeg forsøkte flere forskjellige metoder på å fikse dette problemet, blant annet et forsøk på å gjøre navnet dynamisk med en variabel:
+
+resource "statuscake_contact_group" "default" {
+  name            = "Terraform Contact Group ${timestamp()}"
+  email_addresses = var.contact_group_emails
+}
+
+
+Min midlertidige løsning for å bare gå videre med oppgaven var en manuell endring av navnet.
+Jeg må bare bytte navnet for hver gang:
+variable "contact_group_name" {
+  description = "Navn på kontaktgruppen"
+  type        = string
+  default     = "DevOps Team 30"
+}
+
+Hver gang jeg gjorde en ny terraform apply, måtte jeg endre navnet.
+
+Løsningen har noen konsekvenser. Terraform kunne ikke håndtere kontaktgruppen automatisk. Hvis noen andre på teamet prøvde å kjøre terraform apply uten å endre navnet, ville de møte samme feil. Dette kunne føre til inkonsistens i terraform state, siden kontaktgruppen ikke kunne oppdateres riktig.
+
 Konklusjon
-Terraform-konfigurasjonen er nå mer fleksibel og inkluderer en `contact_group` med varsling. CI/CD fungerer som forventet, og StatusCake-miljøet er riktig konfigurert.
+Terraform-konfigurasjonen er nå mer fleksibel og inkluderer en `contact_group` med varsling. CI/CD fungerer som forventet, og StatusCake-miljøet er riktig konfigurert, men det er problem med opprettelse av kontaktgruppe navn ved hver push til git. Jeg brukte mye tid på å prøve å få Terraform til å opprette kontaktgruppen automatisk uten å få navnekonflikt, men ingen av løsningene ble akseptert av StatusCake eller Terraform.
+
+For å kunne fullføre oppgaven måtte vi derfor bruke en manuell løsning, hvor vi endret navnet på kontaktgruppen for hver terraform apply-kjøring.
+
+Selv om dette tillot oss å gå videre, er dette en svakhet i løsningen som bør forbedres i fremtidige iterasjoner.
 
 Oppgave 3: 
 Terraform-moduler
@@ -189,30 +224,73 @@ module "uptime_check_vg" {
 }
 
 Problemer og Feilsøking
-Til tross for at Terraform-konfigurasjonen er riktig, viser StatusCake fortsatt at begge nettsidene er "down". Dette kan skyldes flere faktorer:
-1. StatusCake blokkeres eller møter redirect-problemer
-   - Løsning: Aktivere `follow_redirects = true` i modulen.
-2. Nettsidene returnerer uventede statuskoder
-   - Løsning: Endre `status_codes = ["200", "301", "302"]` for å tillate redirects.
-3. Timeout kan være for lav eller for høy
-   - Løsning: Justere `timeout` for å se om forespørselen må vente lengre.
-4. StatusCake-loggene må sjekkes for detaljerte feilmeldinger
-   - Løsning: Gå til StatusCake dashboard og se feilmeldingene for hver sjekk.
+Etter å ha implementert Terraform-modulen for StatusCake-overvåkning av to nettsider (VG.no og XKCD.com), oppstod en kritisk feil: Begge oppetidssjekkene gikk fra "UP" til "DOWN" etter noen sekunder, selv om nettsidene var tilgjengelige.
 
-Eksempel på en mulig feilsøkingstilnærming i `main.tf`:
-module "uptime_check_xkcd" {
-  source          = "../modules/statuscake_uptime"
-  name            = "XKCD Uptime Check"
-  address         = "https://xkcd.com"
-  check_interval  = 300
-  confirmation    = 3
-  trigger_rate    = 5
-  timeout         = 50
-  validate_ssl    = false
-  follow_redirects = true
-  status_codes    = ["200", "301", "302"]
-  tags            = ["comics", "monitoring"]
+Forventet resultat var at Terraform skulle opprette fungerende overvåkninger, men StatusCake meldte umiddelbar nedetid, til tross for at nettsidene returnerte HTTP 200-statuskode når de ble manuelt sjekket.
+
+1. Manuell sjekking av nettadresser med curl
+Første steg var å teste nettsidene manuelt for å se om de faktisk var tilgjengelige.
+Kommandoene jeg kjørte var:
+curl -I https://xkcd.com
+curl -L -I https://xkcd.com
+curl -I https://www.vg.no
+curl -L -I https://www.vg.no
+
+Resultat:
+Begge nettsidene returnerte HTTP 200 OK, noe som bekreftet at de faktisk var oppe.
+StatusCake viste fortsatt "DOWN", noe som indikerte at feilen kan ligge i konfigurasjonen av oppetidssjekkene, ikke selve nettsidene.
+
+2. Justering av status_codes i Terraform
+StatusCake kunne ha tolket noen HTTP-statuskoder som feil, selv om de egentlig var forventet.
+
+Endringer ble gjort i variables.tf for modulen:
+
+variable "status_codes" {
+  description = "Tillatte HTTP-statuskoder"
+  type        = list(string)
+  default     = ["200", "301", "302", "403"]
 }
+
+Vi utvidet listen basert på hva vi fant på StatusCake sin egen oppsett av tester:
+
+variable "status_codes" {
+  description = "Tillatte HTTP-statuskoder"
+  type        = list(string)
+  default     = ["200", "201", "204", "205", "206", "303",
+                 "400", "401", "403", "404", "405", "406",
+                 "408", "409", "410", "413", "429", "444",
+                 "494", "495", "496", "499", "500", "501",
+                 "502", "503", "504", "505", "506", "507",
+                 "508", "509", "510", "511", "521", "522", "523"]
+}
+
+Resultat:
+Dette løste ikke problemet, men tiden den var oppe var lengre. StatusCake rapporterte fortsatt at sjekkene var nede eventuelt, selv når sidene returnerte HTTP 200.
+
+3. Endring av request_method fra "HEAD" til "HTTP"
+Terraform-modulen var satt opp til å bruke "HEAD" som request_method, men jeg tenkte at kanskje noen nettsider returneree uventede resultater på en HEAD-forespørsel. Jeg endret request_method til "GET" for å simulere en normal nettleserforespørsel.
+
+Endring i main.tf i modulen:
+http_check {
+  request_method = "GET" # Endret fra HEAD til GET
+  timeout        = 75
+  validate_ssl   = false
+  follow_redirects = true
+  status_codes   = var.status_codes
+}
+
+Resultat:
+Dette løste ikke problemet alene, men bidro til mer konsistente testresultater i StatusCake.
+
+4. Fjerning av gamle oppetidssjekker i StatusCake
+Det var mulig at StatusCake ikke håndterte Terraform-endringer korrekt, og at gamle sjekker fortsatt påvirket resultatene. Jeg slettet alle testene manuelt og prøvde på nytt.
+
+Resultat:
+Dette hjalp en del, da det fjernet flere av de gamle konfigurasjonene som muligens skapte konflikt.
+Sjekkene viste "UP" en stund lengre, men gikk tilbake til "DOWN" etter noen sekunder.
+
+Konklusjon
+Vi prøvde alle mulige feilsøkingsmetoder vi kunne tenke oss, men problemet forble uløst. StatusCake fortsatte å rapportere at sjekkene var "DOWN" selv når de fikk HTTP 200. Den mest sannsynlige feilkilden kan være at jeg har skrevet noe feil. Det er en del redundans i filene, noe som ikke har skap noen problemer i de tidligere oppgavene, men som kanskje skader progresjonen til oppgave 3.
 
 
 Oppgave 4: 
