@@ -1,3 +1,5 @@
+**Eksamensbesvarelse DevOps 2025**
+
 Hvordan kjøre og teste Terraform-konfigurasjonen:
 For å kjøre og teste Terraform-oppsettet med StatusCake, følg disse stegene:
 
@@ -56,9 +58,7 @@ terraform show
 
 -Hvis ingen av disse feilsøkingsmetodene hjalp kan du sjekke metodene i eksamensbesvarelsen under.
 
-Eksamensbesvarelse DevOps 2025
-Oppgave 1: 
-Sikkerhet og forbedring av CI/CD-pipelinen
+**Oppgave 1: Sikkerhet og forbedring av CI/CD-pipelinen**
 
 Endringer i CI/CD-pipelinen:
 I denne oppgaven har jeg forbedret GitHub Actions workflowen for Terraform for å implementere en automatisert og sikker CI/CD-pipeline.
@@ -159,8 +159,7 @@ Test 3: Sikring av API-nøkler
 Testene bekreftet at workflowen fungerer som spesifisert i oppgaven. Dette kan man se under actions i workflowene kalt "test" og du kan prøve det selv.
 
 
-Oppgave 2: 
-Forbedring og utvidelse av Terraform-koden
+**Oppgave 2: Forbedring og utvidelse av Terraform-koden**
 
 Under utviklingen av oppgave 2 oppstod det problemer med branches og .gitignore filen. Derfor måtte jeg slette progresjonen min og resette oppgaven.
 
@@ -238,8 +237,8 @@ Løsningen har dessverre noen konsekvenser. Terraform kunne ikke håndtere konta
 Konklusjon
 Terraform-konfigurasjonen er nå mer fleksibel og inkluderer en `contact_group` med varsling. CI/CD fungerer som forventet, og StatusCake-miljøet er riktig konfigurert, men det er problem med opprettelse av kontaktgruppe navn ved hver push til git. Jeg brukte mye tid på å prøve å få Terraform til å opprette kontaktgruppen automatisk uten å få navnekonflikt, men ingen av løsningene ble akseptert av StatusCake eller Terraform og jeg måtte eventuelt gå videre. 
 
-Oppgave 3: 
-Terraform-moduler
+**Oppgave 3: Terraform-moduler**
+
 
 Beskrivelse
 I denne oppgaven ble Terraform-koden utvidet for å overvåke flere nettsider med StatusCake. For å unngå repetisjon av kode ble det opprettet en Terraform-modul (`modules/statuscake_uptime`) som brukes for å definere og gjenbruke oppsettet for oppetidssjekker.
@@ -348,8 +347,7 @@ Konklusjon
 Jeg prøvde alle mulige feilsøkingsmetoder man kunne tenke, men problemet forble uløst. StatusCake fortsatte å rapportere at sjekkene var "DOWN" etter noen sekunder/minutter selv når de fikk HTTP 200. Den mest sannsynlige feilkilden kan være at jeg har skrevet noe feil. Det er en del redundans i filene, spesielt i main og variabel filene, noe som ikke har skap noen problemer i de tidligere oppgavene, men som kanskje skader progresjonen til oppgave 3. Det kan også være DNS eller serverbaserte blokkeringer da StatusCake sine overvåkingsservere kan være blokkert. Tidligere under øving for eksamen så opplevde jeg problemer med både wifi og DNS serverne på min laptop, spesielt da jeg øvde på Docker.
 
 
-Oppgave 4: 
-Håndtering av Terraform State
+**Oppgave 4: Håndtering av Terraform State**
 
 Siden `terraform.tfstate` for øyeblikket blir sjekket inn i GitHub-repositoryet sammen med koden kan dette fungere i starten, men etter hvert som teamet vokser, føre til flere problemer.
 
